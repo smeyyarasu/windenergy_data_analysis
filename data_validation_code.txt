@@ -1,0 +1,47 @@
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+file_path = 'your_dataset.xlsx'  # Update with your file path
+df = pd.read_excel(file_path)
+
+# Step 1: Handle temperature values
+# Apply abs() and replace values outside the range of 15 to 35 with NaN
+df['Temperature'] = np.abs(df['Temperature'])
+df['Temperature'] = np.where((df['Temperature'] < 15) | (df['Temperature'] > 35), np.nan, df['Temperature'])
+
+# Step 2: Handle pressure values
+# Replace values outside the range of 200 to 1200 with NaN
+df['Pressure'] = np.where((df['Pressure'] < 200) | (df['Pressure'] > 1200), np.nan, df['Pressure'])
+
+
+# Step 4: Interpolation and forward/backward fill for remaining numeric columns
+numeric_cols = df.select_dtypes(include=[np.number]).columns
+
+for col in numeric_cols:
+    if col != 'Temperature':
+        df[col].interpolate(method='linear', inplace=True)
+        df[col].fillna(method='ffill', inplace=True)
+        df[col].fillna(method='bfill', inplace=True)
+
+# Step 5: Fill missing values in Temperature column using median
+df['Temperature'].fillna(df['Temperature'].median(), inplace=True)
+
+# Ensure Temperature values are within abs()
+df['Temperature'] = np.abs(df['Temperature'])
+
+# Step 6: Handle missing dates with forward and backward fill
+date_cols = df.select_dtypes(include=[np.datetime64]).columns
+
+for col in date_cols:
+    df[col].fillna(method='ffill', inplace=True)
+    df[col].fillna(method='bfill', inplace=True)
+
+# Step 7: Fill missing values in categorical columns
+categorical_cols = df.select_dtypes(include=['object']).columns
+
+for col in categorical_cols:
+    df[col].fillna(method='ffill', inplace=True)
+    df[col].fillna(method='bfill', inplace=True)
+df.to_excel('cleaned_dataset_with_std.xlsx', index=False)
+
